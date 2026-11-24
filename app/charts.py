@@ -82,9 +82,11 @@ def weekday_sales(rows):
     df = pd.DataFrame(rows)
     df = df[df["Is_Perishable"] == 1]
     per_day = df.groupby("Demand_Date")["Quantity_Sold"].sum().reset_index()       # total sold each day
-    per_day["Weekday"] = pd.to_datetime(per_day["Demand_Date"]).dt.day_of_week
-    averages = per_day.groupby("Weekday")["Quantity_Sold"].mean()
-    ax.bar([WEEKDAYS[d] for d in averages.index], averages.values, color=BLUE, width=0.6)
+    per_day["Weekday"] = [WEEKDAYS[d] for d in pd.to_datetime(per_day["Demand_Date"]).dt.day_of_week]
+    # barplot takes the mean of each weekday itself; errorbar=None hides the error bars
+    sns.barplot(data=per_day, x="Weekday", y="Quantity_Sold", order=WEEKDAYS, errorbar=None,
+                color=BLUE, saturation=1, width=0.6, ax=ax)
+    ax.set_xlabel("")
     ax.set_ylabel("Units")
     return fig
 
