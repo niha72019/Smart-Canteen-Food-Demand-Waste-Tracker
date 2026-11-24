@@ -6,14 +6,14 @@ tests/test_analysis.py checks that both agree.
 """
 
 from app.algorithms import merge_sort
-from app.db import fetch_all
+from app.db import run_query
 
 WASTE_ALERT_PCT = 20       # items wasting more than this % are flagged
 
 
 def load_days(days=30):
     """Fetch every closed item-day of the last `days` days, oldest first."""
-    return fetch_all(
+    return run_query(
         "SELECT d.Demand_Date, d.Food_ID, f.Food_Name, f.Is_Perishable, f.Preparation_Cost, "
         "       d.Quantity_Prepared, d.Quantity_Sold "
         "FROM daily_demand d JOIN food_item f ON f.Food_ID = d.Food_ID "

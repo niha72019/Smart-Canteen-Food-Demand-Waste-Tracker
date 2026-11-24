@@ -11,7 +11,7 @@ import csv
 from datetime import date
 
 from app import validation
-from app.db import DatabaseError, fetch_all, transaction
+from app.db import DatabaseError, run_in_transaction, run_query
 
 
 def import_days(path):
@@ -21,7 +21,7 @@ def import_days(path):
     Returns (number imported, list of error messages).
     """
     foods = {row["Food_Name"].lower(): row for row in
-             fetch_all("SELECT Food_ID, Food_Name, Is_Perishable FROM food_item")}
+             run_query("SELECT Food_ID, Food_Name, Is_Perishable FROM food_item")}
     imported, errors = 0, []
 
     with open(path, newline="", encoding="utf-8") as f:
@@ -38,13 +38,13 @@ def import_days(path):
                     raise ValueError("only past days can be imported.")
 
                 # One transaction per row: the closed day first, then its waste.
-                with transaction() as cur:
-                    cur.execute("INSERT INTO daily_demand (Food_ID, Demand_Date, Quantity_Prepared, "
-                                "Quantity_Sold, Is_Closed) VALUES (%s, %s, %s, %s, TRUE)",
-                                (food["Food_ID"], day, prepared, sold))
-                    if food["Is_Perishable"] and prepared > sold:
-                        cur.execute("INSERT INTO waste_record (Food_ID, Waste_Date, Quantity_Wasted) "
-                                    "VALUES (%s, %s, %s)", (food["Food_ID"], day, prepared - sold))
+                statements = [("INSERT INTO daily_demand (Food_ID, Demand_Date, Quantity_Prepared, "
+                               "Quantity_Sold, Is_Closed) VALUES (%s, %s, %s, %s, TRUE)",
+                               (food["Food_ID"], day, prepared, sold))]
+                if food["Is_Perishable"] and prepared > sold:
+                    statements.append(("INSERT INTO waste_record (Food_ID, Waste_Date, Quantity_Wasted) "
+                                       "VALUES (%s, %s, %s)", (food["Food_ID"], day, prepared - sold)))
+                run_in_transaction(statements)
                 imported += 1
             except (ValueError, DatabaseError) as err:
                 errors.append(f"Line {line_no}: {err}")

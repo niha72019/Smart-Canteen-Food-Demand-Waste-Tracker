@@ -5,12 +5,12 @@ Read-only: uses the generated data and changes nothing.
 """
 
 from app import analysis
-from app.db import fetch_all
+from app.db import run_query
 
 
 def test_python_waste_matches_sql_view():
     rows = analysis.load_days(30)
-    sql = {(r["Food_ID"], r["Demand_Date"]): r for r in fetch_all(
+    sql = {(r["Food_ID"], r["Demand_Date"]): r for r in run_query(
         "SELECT * FROM v_daily_waste WHERE Demand_Date >= CURDATE() - INTERVAL 30 DAY")}
     assert rows and len(rows) == len(sql)
     for row in rows:
@@ -27,7 +27,7 @@ def test_python_waste_matches_sql_view():
 
 def test_item_totals_match_sql():
     summary = {item["name"]: item for item in analysis.item_summary(analysis.load_days(30))}
-    for row in fetch_all("SELECT Food_Name, SUM(Wasted) AS wasted, SUM(Loss) AS loss FROM v_daily_waste "
+    for row in run_query("SELECT Food_Name, SUM(Wasted) AS wasted, SUM(Loss) AS loss FROM v_daily_waste "
                          "WHERE Demand_Date >= CURDATE() - INTERVAL 30 DAY GROUP BY Food_Name"):
         assert summary[row["Food_Name"]]["wasted"] == row["wasted"]
         assert summary[row["Food_Name"]]["loss"] == row["loss"]

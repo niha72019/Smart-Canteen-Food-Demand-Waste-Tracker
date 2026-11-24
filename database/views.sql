@@ -27,7 +27,7 @@ SELECT Food_ID, Food_Name, Category_Name, Is_Perishable,
        SUM(Wasted)                                    AS Wasted,
        ROUND(SUM(Wasted) * 100 / SUM(Quantity_Prepared), 2) AS Waste_Pct,
        ROUND(AVG(Quantity_Sold), 1)                   AS Avg_Daily_Sold,
-       SUM(Quantity_Sold = Quantity_Prepared)         AS Sold_Out_Days,
+       SUM(CASE WHEN Quantity_Sold = Quantity_Prepared THEN 1 ELSE 0 END) AS Sold_Out_Days,
        SUM(Loss)                                      AS Loss
 FROM v_daily_waste
 GROUP BY Food_ID, Food_Name, Category_Name, Is_Perishable;
@@ -42,14 +42,17 @@ GROUP BY Month;
 
 -- 4. Packaged items with less than 3 days of stock left
 --    (based on average daily sales over the last 7 days).
+--    The inner query (a derived table) works out each item's average first,
+--    so the outer WHERE can compare stock with it.
 CREATE VIEW v_low_stock AS
-SELECT f.Food_ID, f.Food_Name, i.Quantity_Available,
-       (SELECT ROUND(AVG(d.Quantity_Sold), 1) FROM daily_demand d
-        WHERE d.Food_ID = f.Food_ID AND d.Demand_Date >= CURDATE() - INTERVAL 7 DAY) AS Avg_Daily_Sold
-FROM food_item f
-JOIN inventory i ON i.Food_ID = f.Food_ID
-WHERE f.Is_Perishable = FALSE
-HAVING i.Quantity_Available < 3 * COALESCE(Avg_Daily_Sold, 0);
+SELECT *
+FROM (SELECT f.Food_ID, f.Food_Name, i.Quantity_Available,
+             (SELECT ROUND(AVG(d.Quantity_Sold), 1) FROM daily_demand d
+              WHERE d.Food_ID = f.Food_ID AND d.Demand_Date >= CURDATE() - INTERVAL 7 DAY) AS Avg_Daily_Sold
+      FROM food_item f
+      JOIN inventory i ON i.Food_ID = f.Food_ID
+      WHERE f.Is_Perishable = FALSE) AS stock
+WHERE Quantity_Available < 3 * COALESCE(Avg_Daily_Sold, 0);
 
 -- 5. Purchases and spending per supplier.
 CREATE VIEW v_supplier_summary AS

@@ -4,14 +4,24 @@ Click a column heading to sort it (merge sort); type a name in the search
 box to jump to that row (binary search).
 """
 
+from functools import partial
+
 import ttkbootstrap as ttk
 
 from app.algorithms import binary_search, merge_sort
 
 
 def sort_value(value):
-    """Sort key that puts empty (None) values last and works for numbers, text and dates."""
-    return (value is None, value.lower() if isinstance(value, str) else value if value is not None else 0)
+    """
+    The value a cell is sorted by. Pairs are compared first item first,
+    so (0, ...) comes before (1, ...): empty cells always go last.
+    """
+    if value is None:
+        return (1, "")
+    elif isinstance(value, str):
+        return (0, value.lower())          # text: ignore upper/lower case
+    else:
+        return (0, value)                  # numbers and dates as they are
 
 
 class DataTable(ttk.Frame):
@@ -47,7 +57,9 @@ class DataTable(ttk.Frame):
         self.columns = columns
         self.tree.configure(columns=[key for key, _, _ in columns])
         for key, heading, width in columns:
-            self.tree.heading(key, text=heading, command=lambda k=key: self.sort_by(k))
+            # partial(self.sort_by, key) makes a ready-made call "self.sort_by(key)" for this
+            # column, which the heading runs when it is clicked.
+            self.tree.heading(key, text=heading, command=partial(self.sort_by, key))
             self.tree.column(key, width=width, anchor="w")
 
     def set_rows(self, rows):

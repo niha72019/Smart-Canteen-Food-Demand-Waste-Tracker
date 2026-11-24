@@ -19,7 +19,7 @@ Built as one project for two 3rd-semester labs:
 - **Stock & purchases**: stock levels, low-stock warning, suppliers, purchase entry.
 - **CSV import & export**: import past days (bad rows are skipped and reported), export any report, or export a full report of CSVs and chart PNGs.
 - **Dashboard**: KPI cards and 4 charts.
-- **SQL Insights**: run any of the 22 analytical queries from inside the app.
+- **SQL Insights**: run any of the 20 analytical queries from inside the app.
 
 ## Tech stack
 

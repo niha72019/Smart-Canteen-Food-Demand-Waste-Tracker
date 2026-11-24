@@ -14,7 +14,7 @@ from datetime import timedelta
 
 import pandas as pd
 
-from app.db import fetch_all, transaction
+from app.db import run_in_transaction, run_query
 
 
 def recommend_quantity(history, target_date):
@@ -64,7 +64,7 @@ def generate_recommendations():
     Recommend quantities for every cooked item for the day after the last
     closed day, save them in RECOMMENDATION, and return them as a list.
     """
-    rows = fetch_all(
+    rows = run_query(
         "SELECT d.Food_ID, f.Food_Name, d.Demand_Date, d.Quantity_Prepared, d.Quantity_Sold "
         "FROM daily_demand d JOIN food_item f ON f.Food_ID = d.Food_ID "
         "WHERE d.Is_Closed = TRUE AND f.Is_Perishable = TRUE ORDER BY d.Demand_Date")
@@ -77,14 +77,20 @@ def generate_recommendations():
         histories.setdefault((row["Food_ID"], row["Food_Name"]), []).append(
             {"date": row["Demand_Date"], "prepared": row["Quantity_Prepared"], "sold": row["Quantity_Sold"]})
 
-    results = []
-    with transaction() as cur:
-        for (food_id, name), history in histories.items():
-            quantity, basis = recommend_quantity(history, target_date)
-            cur.execute(
-                "INSERT INTO recommendation (Food_ID, Recommendation_Date, Recommended_Quantity, Basis) "
-                "VALUES (%s, %s, %s, %s) AS new "
-                "ON DUPLICATE KEY UPDATE Recommended_Quantity = new.Recommended_Quantity, Basis = new.Basis",
-                (food_id, target_date, quantity, basis))
-            results.append({"date": target_date, "name": name, "quantity": quantity, "basis": basis})
+    # Items that already have a recommendation for that day are updated, the rest inserted.
+    existing = [r["Food_ID"] for r in run_query(
+        "SELECT Food_ID FROM recommendation WHERE Recommendation_Date = %s", (target_date,))]
+    results, statements = [], []
+    for (food_id, name), history in histories.items():
+        quantity, basis = recommend_quantity(history, target_date)
+        if food_id in existing:
+            statements.append(("UPDATE recommendation SET Recommended_Quantity = %s, Basis = %s "
+                               "WHERE Food_ID = %s AND Recommendation_Date = %s",
+                               (quantity, basis, food_id, target_date)))
+        else:
+            statements.append(("INSERT INTO recommendation (Food_ID, Recommendation_Date, "
+                               "Recommended_Quantity, Basis) VALUES (%s, %s, %s, %s)",
+                               (food_id, target_date, quantity, basis)))
+        results.append({"date": target_date, "name": name, "quantity": quantity, "basis": basis})
+    run_in_transaction(statements)
     return results

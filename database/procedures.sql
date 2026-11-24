@@ -1,7 +1,7 @@
 -- procedures.sql - stored procedures.
 --
 -- sp_close_day is run inside ONE transaction by the caller:
---   Python:    app/db.py transaction() commits it, or rolls everything back on error
+--   Python:    app/db.py run_query() commits it, or rolls everything back on error
 --   Workbench: START TRANSACTION;  CALL sp_close_day('2026-11-24');  COMMIT;
 
 DELIMITER $$
@@ -48,17 +48,13 @@ BEGIN
     FROM v_daily_waste WHERE Demand_Date = p_date ORDER BY Food_Name;
 END$$
 
--- Day-by-day report for one item, with a TOTAL row at the end (WITH ROLLUP).
+-- Day-by-day report for one item between two dates.
 CREATE PROCEDURE sp_item_report(IN p_food_id INT, IN p_from DATE, IN p_to DATE)
 BEGIN
-    SELECT COALESCE(Demand_Date, 'TOTAL') AS Day,
-           SUM(Quantity_Prepared) AS Prepared,
-           SUM(Quantity_Sold)     AS Sold,
-           SUM(Wasted)            AS Wasted,
-           SUM(Loss)              AS Loss
+    SELECT Demand_Date, Quantity_Prepared, Quantity_Sold, Wasted, Waste_Pct, Loss
     FROM v_daily_waste
     WHERE Food_ID = p_food_id AND Demand_Date BETWEEN p_from AND p_to
-    GROUP BY Demand_Date WITH ROLLUP;
+    ORDER BY Demand_Date;
 END$$
 
 DELIMITER ;

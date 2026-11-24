@@ -67,23 +67,17 @@ SELECT Sale_Date, SUM(Total_Amount) AS Revenue,
 FROM sale WHERE Sale_Date >= CURDATE() - INTERVAL 14 DAY
 GROUP BY Sale_Date ORDER BY Sale_Date;
 
--- Q13. 7-day moving average of Samosa sales (window frame).
-SELECT d.Demand_Date, d.Quantity_Sold,
-       ROUND(AVG(d.Quantity_Sold) OVER (ORDER BY d.Demand_Date ROWS 6 PRECEDING), 1) AS Moving_Avg
-FROM daily_demand d JOIN food_item f ON f.Food_ID = d.Food_ID
-WHERE f.Food_Name = 'Samosa' ORDER BY d.Demand_Date;
-
--- Q14. Demand band for each item (CASE).
+-- Q13. Demand band for each item (CASE).
 SELECT Food_Name, Avg_Daily_Sold,
        CASE WHEN Avg_Daily_Sold >= 40 THEN 'High' WHEN Avg_Daily_Sold >= 20 THEN 'Medium' ELSE 'Low' END AS Demand
 FROM v_item_performance ORDER BY Avg_Daily_Sold DESC;
 
--- Q15. Sell-out days in the last 7 days (CASE inside SUM). 3 or more -> cook more.
+-- Q14. Sell-out days in the last 7 days (CASE inside SUM). 3 or more -> cook more.
 SELECT Food_Name, SUM(CASE WHEN Quantity_Sold = Quantity_Prepared THEN 1 ELSE 0 END) AS Sold_Out_Days
 FROM v_daily_waste WHERE Is_Perishable = TRUE AND Demand_Date >= CURDATE() - INTERVAL 7 DAY
 GROUP BY Food_Name ORDER BY Sold_Out_Days DESC;
 
--- Q16. Waste % on weekdays vs weekends per category (CASE pivot).
+-- Q15. Waste % on weekdays vs weekends per category (CASE pivot).
 SELECT Category_Name,
        ROUND(SUM(CASE WHEN WEEKDAY(Demand_Date) < 5 THEN Wasted END) * 100
            / SUM(CASE WHEN WEEKDAY(Demand_Date) < 5 THEN Quantity_Prepared END), 1) AS Weekday_Waste_Pct,
@@ -91,33 +85,27 @@ SELECT Category_Name,
            / SUM(CASE WHEN WEEKDAY(Demand_Date) >= 5 THEN Quantity_Prepared END), 1) AS Weekend_Waste_Pct
 FROM v_daily_waste WHERE Is_Perishable = TRUE GROUP BY Category_Name;
 
--- Q17. Average waste % for each day of the week (GROUP BY a date function).
+-- Q16. Average waste % for each day of the week (GROUP BY a date function).
 SELECT DAYNAME(Demand_Date) AS Day, ROUND(SUM(Wasted) * 100 / SUM(Quantity_Prepared), 1) AS Waste_Pct
 FROM v_daily_waste WHERE Is_Perishable = TRUE
 GROUP BY WEEKDAY(Demand_Date), Day ORDER BY WEEKDAY(Demand_Date);
 
--- Q18. Forecast accuracy: recommendation in force vs what sold (empty until recommendations are used).
+-- Q17. Forecast accuracy: recommendation in force vs what sold (empty until recommendations are used).
 SELECT f.Food_Name, ROUND(AVG(ABS(d.Estimated_Demand - d.Quantity_Sold)), 1) AS Avg_Error
 FROM daily_demand d JOIN food_item f ON f.Food_ID = d.Food_ID
 WHERE d.Estimated_Demand IS NOT NULL GROUP BY f.Food_Name;
 
--- Q19. Spending per supplier per month (join, GROUP BY two columns).
+-- Q18. Spending per supplier per month (join, GROUP BY two columns).
 SELECT s.Supplier_Name, DATE_FORMAT(p.Purchase_Date, '%Y-%m') AS Month, SUM(p.Total_Amount) AS Spent
 FROM purchase p JOIN supplier s ON s.Supplier_ID = p.Supplier_ID
 GROUP BY s.Supplier_Name, Month ORDER BY Month;
 
--- Q20. Which supplier supplies each packaged item (4-table join, DISTINCT).
+-- Q19. Which supplier supplies each packaged item (4-table join, DISTINCT).
 SELECT DISTINCT f.Food_Name, s.Supplier_Name
 FROM purchase_item pi JOIN purchase p ON p.Purchase_ID = pi.Purchase_ID
 JOIN supplier s ON s.Supplier_ID = p.Supplier_ID JOIN food_item f ON f.Food_ID = pi.Food_ID;
 
--- Q21. Each item's share of total revenue (window SUM OVER ()).
-SELECT f.Food_Name, SUM(si.Quantity * si.Selling_Price) AS Revenue,
-       ROUND(SUM(si.Quantity * si.Selling_Price) * 100 / SUM(SUM(si.Quantity * si.Selling_Price)) OVER (), 1) AS Share_Pct
-FROM sale_item si JOIN food_item f ON f.Food_ID = si.Food_ID
-GROUP BY f.Food_Name ORDER BY Revenue DESC;
-
--- Q22. The views and procedures.
+-- Q20. The views and procedures.
 SELECT * FROM v_monthly_loss;
 SELECT * FROM v_low_stock;
 SELECT * FROM v_supplier_summary;

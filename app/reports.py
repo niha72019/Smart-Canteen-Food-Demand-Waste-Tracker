@@ -1,16 +1,11 @@
-"""
-reports.py - report tables for export, the "full report" export,
-and the SQL Insights queries read from database/queries.sql.
-"""
+"""reports.py - report tables for export and the "full report" export."""
 
 from datetime import date
 from pathlib import Path
 
 from app import analysis, charts, csv_io, db
-from database.setup_db import split_statements
 
-PROJECT = Path(__file__).resolve().parent.parent
-REPORTS_DIR = PROJECT / "reports"
+REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
 
 
 def item_report():
@@ -52,22 +47,3 @@ def export_full_report():
         fig.savefig(path, dpi=150)
         files.append(path)
     return files
-
-
-def load_queries():
-    """
-    Read database/queries.sql and return [(title, sql), ...].
-    The title is the '-- Q1. ...' comment above each query.
-    """
-    queries = []
-    for block in (PROJECT / "database" / "queries.sql").read_text(encoding="utf-8").split("\n-- Q")[1:]:
-        title = "Q" + block.splitlines()[0]
-        statements = split_statements("-- Q" + block)       # put the comment mark back
-        for n, sql in enumerate(statements, start=1):
-            queries.append((title if len(statements) == 1 else f"{title} ({n}/{len(statements)})", sql))
-    return queries
-
-
-def run_query(sql):
-    """Run one query from queries.sql and return its rows."""
-    return db.fetch_all(sql)
