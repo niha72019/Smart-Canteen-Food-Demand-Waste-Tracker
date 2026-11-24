@@ -1,11 +1,4 @@
-"""
-csv_io.py - import past days from a CSV file and export reports to CSV
-(using Python's csv module).
-
-Import format (first line is the header):
-    date,food,prepared,sold
-    2026-08-01,Samosa,60,55
-"""
+"""Import past days from a CSV file (date,food,prepared,sold) and export reports to CSV."""
 
 import csv
 from datetime import date
@@ -15,11 +8,7 @@ from app.db import DatabaseError, run_in_transaction, run_query
 
 
 def import_days(path):
-    """
-    Import each valid row as a closed day (plus a waste record for unsold
-    cooked food). Bad rows are skipped.
-    Returns (number imported, list of error messages).
-    """
+    """Import the valid rows of a CSV file; return (rows imported, messages for skipped rows)."""
     foods = {row["Food_Name"].lower(): row for row in
              run_query("SELECT Food_ID, Food_Name, Is_Perishable FROM food_item")}
     imported, errors = 0, []
@@ -37,7 +26,7 @@ def import_days(path):
                 if day >= date.today():
                     raise ValueError("only past days can be imported.")
 
-                # One transaction per row: the closed day first, then its waste.
+                # The day is saved as closed, so it does not change today's stock.
                 statements = [("INSERT INTO daily_demand (Food_ID, Demand_Date, Quantity_Prepared, "
                                "Quantity_Sold, Is_Closed) VALUES (%s, %s, %s, %s, TRUE)",
                                (food["Food_ID"], day, prepared, sold))]
@@ -52,7 +41,7 @@ def import_days(path):
 
 
 def export_rows(rows, path):
-    """Write a list of dicts (e.g. a report) to a CSV file with a header row."""
+    """Write a list of dicts to a CSV file."""
     if not rows:
         raise ValueError("Nothing to export.")
     with open(path, "w", newline="", encoding="utf-8") as f:

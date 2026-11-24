@@ -1,4 +1,4 @@
-"""db.py - the only module that talks to MySQL. Every value is passed with %s (no SQL injection)."""
+"""Database access: connections, queries and transactions for the whole app."""
 
 import mysql.connector
 
@@ -18,9 +18,9 @@ def get_connection():
 
 
 def run_query(sql, params=()):
-    """Run one statement (SELECT or CALL), commit it, and return its rows as a list of dicts."""
+    """Run one statement (SELECT or CALL) and return its rows as a list of dicts."""
     conn = get_connection()
-    cur = conn.cursor(dictionary=True)        # each row comes back as a dict
+    cur = conn.cursor(dictionary=True)
     try:
         cur.execute(sql, params)
         rows = cur.fetchall()
@@ -30,14 +30,14 @@ def run_query(sql, params=()):
         return rows
     except mysql.connector.Error as err:
         conn.rollback()
-        raise DatabaseError(err.msg) from err  # for our triggers err.msg is the SIGNAL text
+        raise DatabaseError(err.msg) from err  # err.msg is the trigger's SIGNAL message, if any
     finally:
         cur.close()
         conn.close()
 
 
 def run_in_transaction(statements):
-    """Run a list of (sql, params) as ONE transaction (all saved or none). Returns the first new id."""
+    """Run several (sql, params) statements as one transaction and return the first new id."""
     conn = get_connection()
     cur = conn.cursor()
     try:
@@ -56,9 +56,7 @@ def run_in_transaction(statements):
         conn.close()
 
 
-# ---------------------------------------------------------------------------
-# Canteen operations used by the GUI (so the GUI itself contains no SQL)
-# ---------------------------------------------------------------------------
+# ----- Canteen operations -----
 
 def list_items():
     """All food items with category and current stock."""
@@ -75,7 +73,7 @@ def list_categories():
 
 
 def category_id(name):
-    """Return the id of a category, creating the category if it does not exist yet."""
+    """Return a category's id, creating the category if it is new."""
     rows = run_query("SELECT Category_ID FROM category WHERE Category_Name = %s", (name,))
     if rows:
         return rows[0]["Category_ID"]
@@ -95,7 +93,7 @@ def save_item(food_id, name, category, price, cost, perishable):
 
 
 def delete_item(food_id):
-    """Delete an item. Refused (by the foreign keys) if it has any history."""
+    """Delete a food item (refused if it has any history)."""
     try:
         run_in_transaction([("DELETE FROM food_item WHERE Food_ID = %s", (food_id,))])
     except DatabaseError:
@@ -103,12 +101,12 @@ def delete_item(food_id):
 
 
 def day_is_closed(day):
-    """True if sp_close_day has already processed this day."""
+    """Return True if the day has already been closed."""
     return bool(run_query("SELECT 1 FROM daily_demand WHERE Demand_Date = %s AND Is_Closed = TRUE LIMIT 1", (day,)))
 
 
 def production_sheet(day):
-    """Cooked items with the recommended quantity and anything already entered for the day."""
+    """Cooked items with their recommended and prepared quantities for a day."""
     return run_query(
         "SELECT f.Food_ID, f.Food_Name, r.Recommended_Quantity, d.Quantity_Prepared FROM food_item f "
         "LEFT JOIN recommendation r ON r.Food_ID = f.Food_ID AND r.Recommendation_Date = %s "
@@ -117,7 +115,7 @@ def production_sheet(day):
 
 
 def save_production(day, quantities):
-    """Save {Food_ID: quantity prepared}: update existing entries, insert new ones (with Estimated_Demand)."""
+    """Save the quantity prepared of each item ({Food_ID: quantity}) for a day."""
     if day_is_closed(day):
         raise DatabaseError("This day is already closed.")
     existing = [r["Food_ID"] for r in run_query("SELECT Food_ID FROM daily_demand WHERE Demand_Date = %s", (day,))]
@@ -135,30 +133,31 @@ def save_production(day, quantities):
 
 
 def save_bill(day, lines):
-    """Save one bill. lines = {Food_ID: (quantity, price)}. Returns (Sale_ID, total)."""
+    """Save one bill ({Food_ID: (quantity, price)}) and return (Sale_ID, total)."""
     if day_is_closed(day):
         raise DatabaseError("This day is already closed.")
     statements = [("INSERT INTO sale (Sale_Date) VALUES (%s)", (day,))]
     for food_id, (quantity, price) in lines.items():
-        statements.append(("INSERT INTO sale_item (Sale_ID, Food_ID, Quantity, Selling_Price) "   # LAST_INSERT_ID()
-                           "VALUES (LAST_INSERT_ID(), %s, %s, %s)", (food_id, quantity, price)))  # = the new Sale_ID
+        # LAST_INSERT_ID() is the Sale_ID of the bill inserted above.
+        statements.append(("INSERT INTO sale_item (Sale_ID, Food_ID, Quantity, Selling_Price) "
+                           "VALUES (LAST_INSERT_ID(), %s, %s, %s)", (food_id, quantity, price)))
     sale_id = run_in_transaction(statements)
     total = run_query("SELECT Total_Amount FROM sale WHERE Sale_ID = %s", (sale_id,))[0]["Total_Amount"]
     return sale_id, total
 
 
 def close_day(day):
-    """Run sp_close_day (one transaction) and return its summary rows."""
+    """Close a day and return its summary."""
     return run_query("CALL sp_close_day(%s)", (day,))
 
 
 def list_suppliers():
-    """All suppliers with their purchase totals (v_supplier_summary)."""
+    """All suppliers with their purchase totals."""
     return run_query("SELECT * FROM v_supplier_summary ORDER BY Supplier_Name")
 
 
 def save_purchase(supplier_id, day, food_id, quantity, unit_price):
-    """Save a one-line purchase; the trigger adds the stock and the total."""
+    """Save a purchase of one packaged item."""
     run_in_transaction([
         ("INSERT INTO purchase (Supplier_ID, Purchase_Date) VALUES (%s, %s)", (supplier_id, day)),
         ("INSERT INTO purchase_item (Purchase_ID, Food_ID, Quantity, Unit_Price) "
@@ -167,7 +166,7 @@ def save_purchase(supplier_id, day, food_id, quantity, unit_price):
 
 
 def low_stock():
-    """Packaged items with under 3 days of stock (v_low_stock)."""
+    """Packaged items that are running low."""
     return run_query("SELECT * FROM v_low_stock")
 
 
@@ -187,11 +186,11 @@ def sales_on(day):
 
 
 def monthly_loss():
-    """Money lost to waste per month (v_monthly_loss)."""
+    """Money lost to waste per month."""
     return run_query("SELECT * FROM v_monthly_loss ORDER BY Month")
 
 
 def daily_waste(days=30):
-    """v_daily_waste rows for the last `days` days."""
+    """Daily waste figures for the last `days` days."""
     return run_query("SELECT * FROM v_daily_waste WHERE Demand_Date >= CURDATE() - INTERVAL %s DAY "
                      "ORDER BY Demand_Date, Food_Name", (days,))

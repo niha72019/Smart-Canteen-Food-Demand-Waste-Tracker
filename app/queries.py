@@ -1,7 +1,4 @@
-"""
-queries.py - the analytical queries shown in the SQL Insights tab.
-The same queries (with comments) are in database/queries.sql for MySQL Workbench.
-"""
+"""The analytical queries shown in the SQL Insights tab."""
 
 QUERIES = {
     "Q1 Menu with category and profit per unit (2-table join)":

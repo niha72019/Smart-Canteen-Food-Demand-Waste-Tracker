@@ -1,7 +1,4 @@
--- triggers.sql - keeps stock and bill/purchase totals correct automatically.
--- Stock comes IN from production (daily_demand) and purchases,
--- and goes OUT through bills (and at close of day, in sp_close_day).
--- DELIMITER $$ lets the trigger bodies contain ';' (also works in Workbench).
+-- Triggers that keep stock and bill/purchase totals up to date.
 
 DELIMITER $$
 
@@ -25,6 +22,7 @@ BEGIN
 END$$
 
 -- 3. A bill line is refused if there is not enough stock.
+--    BEFORE INSERT, so the line can be stopped before it is saved.
 CREATE TRIGGER trg_sale_item_before_insert
 BEFORE INSERT ON sale_item
 FOR EACH ROW
@@ -61,8 +59,7 @@ BEGIN
 END$$
 
 -- 6. Morning production puts the cooked food into stock.
---    Closed rows (written at close of day or imported from CSV) are history
---    and must not change today's stock.
+--    Closed rows (from close of day or CSV import) are history, so they do not change stock.
 CREATE TRIGGER trg_daily_demand_after_insert
 AFTER INSERT ON daily_demand
 FOR EACH ROW
@@ -73,8 +70,8 @@ BEGIN
     END IF;
 END$$
 
--- 7. Editing today's production moves stock by the difference
---    (50 -> 60 adds 10). A decrease is refused if that food is already sold.
+-- 7. Editing today's production moves stock by the difference (50 -> 60 adds 10).
+--    BEFORE UPDATE, so a decrease below what is already sold can be refused.
 CREATE TRIGGER trg_daily_demand_before_update
 BEFORE UPDATE ON daily_demand
 FOR EACH ROW

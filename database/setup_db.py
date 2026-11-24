@@ -1,10 +1,4 @@
-"""
-setup_db.py - (re)creates the database from the .sql files.
-
-    python -m database.setup_db
-
-WARNING: drops the whole database first, so all data is deleted.
-"""
+"""Recreates the database from the .sql files (all existing data is deleted)."""
 
 import mysql.connector
 
@@ -14,20 +8,16 @@ SQL_FILES = ["schema.sql", "triggers.sql", "views.sql", "procedures.sql"]
 
 
 def split_statements(text):
-    """
-    Split a .sql file into single statements.
-    mysql-connector runs one statement at a time and does not understand
-    Workbench's 'DELIMITER $$' line, so we handle it here.
-    """
+    """Split the text of a .sql file into single statements, following DELIMITER lines."""
     statements, current, delimiter = [], [], ";"
     for line in text.splitlines():
         if line.strip().startswith("--") or not line.strip():
-            continue                                   # skip comments and blank lines
+            continue
         if line.upper().startswith("DELIMITER"):
             delimiter = line.split()[1]                # e.g. $$ or ;
             continue
         current.append(line)
-        if line.rstrip().endswith(delimiter):          # end of a statement
+        if line.rstrip().endswith(delimiter):
             statements.append("\n".join(current).rstrip()[: -len(delimiter)])
             current = []
     return statements

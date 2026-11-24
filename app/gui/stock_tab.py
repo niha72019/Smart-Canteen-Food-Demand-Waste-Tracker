@@ -1,4 +1,4 @@
-"""stock_tab.py - current stock, low-stock warning, suppliers and purchases."""
+"""Stock & Purchases tab: stock levels, suppliers and new purchases."""
 
 from datetime import date
 
@@ -9,7 +9,7 @@ from app.gui.table import DataTable
 
 
 class StockTab(ttk.Frame):
-    """Stock table on the left; purchase form and suppliers on the right."""
+    """Stock and supplier tables with a purchase form."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
@@ -59,7 +59,7 @@ class StockTab(ttk.Frame):
         self.item_box.configure(values=list(self.item_ids))
 
     def save(self):
-        """Validate and save the purchase; the trigger adds the stock."""
+        """Validate and save the purchase."""
         try:
             if self.supplier.get() not in self.supplier_ids or self.item.get() not in self.item_ids:
                 raise ValueError("Choose a supplier and an item.")

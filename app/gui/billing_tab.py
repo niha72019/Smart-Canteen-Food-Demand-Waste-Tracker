@@ -1,4 +1,4 @@
-"""billing_tab.py - build a bill line by line and save it."""
+"""Billing tab: build a bill line by line and save it."""
 
 from datetime import date
 
@@ -37,12 +37,12 @@ class BillingTab(ttk.Frame):
         self.refresh()
 
     def refresh(self):
-        """Reload the items (with stock) for the drop-down."""
+        """Reload the items for the drop-down."""
         self.items = {row["Food_Name"]: row for row in db.list_items()}
         self.item_box.configure(values=[f"{name}" for name in self.items])
 
     def add_line(self):
-        """Add the chosen item to the bill (same item again -> quantity goes up)."""
+        """Add the chosen item and quantity to the bill."""
         try:
             item = self.items.get(self.item.get())
             if item is None:
@@ -65,7 +65,7 @@ class BillingTab(ttk.Frame):
         self.total.configure(text=f"Total: Rs {sum(l['amount'] for l in self.lines.values()):,.2f}")
 
     def save(self):
-        """Save the bill; the database refuses it if any item is out of stock."""
+        """Save the bill."""
         if not self.lines:
             ttk.Messagebox.show_warning("The bill is empty.", "Billing")
             return

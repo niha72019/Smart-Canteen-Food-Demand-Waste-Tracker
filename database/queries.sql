@@ -1,5 +1,4 @@
--- queries.sql - analytical queries for the viva demo.
--- In Workbench: put the cursor in a query and press Ctrl+Enter.
+-- Analytical queries on the canteen data.
 USE smart_canteen;
 
 -- Q1. Menu with category and profit per unit (2-table join).

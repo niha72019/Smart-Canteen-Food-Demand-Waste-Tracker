@@ -1,4 +1,4 @@
-"""reports.py - report tables for export and the "full report" export."""
+"""Report tables and the full report export (CSVs and chart images)."""
 
 from datetime import date
 from pathlib import Path
@@ -9,7 +9,7 @@ REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
 
 
 def item_report():
-    """Per-item totals for the last 30 days, rounded for reading."""
+    """Per-item totals for the last 30 days."""
     rows = []
     for item in analysis.item_summary(analysis.load_days(30)):
         rows.append({"Item": item["name"], "Days": item["days"], "Prepared": item["prepared"],
@@ -19,7 +19,7 @@ def item_report():
     return rows
 
 
-# Report name -> function that returns its rows (used by the Reports tab).
+# Report name -> function that returns its rows.
 REPORTS = {
     "Item performance (30 days)": item_report,
     "Daily waste (30 days)": lambda: db.daily_waste(30),
@@ -29,10 +29,7 @@ REPORTS = {
 
 
 def export_full_report():
-    """
-    Save every report as CSV and every chart as PNG into reports/
-    (the folder is created only now). Returns the list of files written.
-    """
+    """Save every report as CSV and every chart as PNG in reports/, and return the file paths."""
     REPORTS_DIR.mkdir(exist_ok=True)
     stamp = date.today().isoformat()
     files = []

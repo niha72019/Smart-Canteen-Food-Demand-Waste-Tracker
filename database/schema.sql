@@ -1,13 +1,11 @@
--- schema.sql - the 11 tables of the Smart Canteen database.
--- Run with:  python -m database.setup_db   (creates the database first)
+-- The 11 tables of the Smart Canteen database.
 
 CREATE TABLE category (
     Category_ID   INT AUTO_INCREMENT PRIMARY KEY,
     Category_Name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- Is_Perishable: TRUE = cooked daily (leftovers wasted at close),
---                FALSE = packaged (chips, drinks; stock carries over)
+-- Is_Perishable: TRUE = cooked daily (leftovers are wasted), FALSE = packaged (stock carries over)
 CREATE TABLE food_item (
     Food_ID          INT AUTO_INCREMENT PRIMARY KEY,
     Food_Name        VARCHAR(100) NOT NULL UNIQUE,
@@ -25,7 +23,7 @@ CREATE TABLE supplier (
     Address       VARCHAR(255)
 );
 
--- Total_Amount is kept up to date by a trigger on purchase_item.
+-- Total_Amount is kept up to date by a trigger.
 CREATE TABLE purchase (
     Purchase_ID   INT AUTO_INCREMENT PRIMARY KEY,
     Supplier_ID   INT NOT NULL,
@@ -54,7 +52,7 @@ CREATE TABLE inventory (
     FOREIGN KEY (Food_ID) REFERENCES food_item (Food_ID) ON DELETE CASCADE
 );
 
--- Total_Amount is kept up to date by a trigger on sale_item.
+-- Total_Amount is kept up to date by a trigger.
 CREATE TABLE sale (
     Sale_ID      INT AUTO_INCREMENT PRIMARY KEY,
     Sale_Date    DATE NOT NULL,
@@ -85,11 +83,8 @@ CREATE TABLE waste_record (
     INDEX (Waste_Date)
 );
 
--- One row per item per day.
---   Quantity_Prepared: cooked that morning (packaged items: quantity on hand)
---   Quantity_Sold:     filled by sp_close_day (or CSV import)
---   Estimated_Demand:  the recommendation in force that morning
---   Is_Closed:         TRUE once sp_close_day has processed the day
+-- One row per item per day. For packaged items Quantity_Prepared is the quantity on hand;
+-- Estimated_Demand is the recommendation in force that morning.
 CREATE TABLE daily_demand (
     Demand_ID         INT AUTO_INCREMENT PRIMARY KEY,
     Food_ID           INT NOT NULL,
@@ -104,8 +99,7 @@ CREATE TABLE daily_demand (
     INDEX (Demand_Date)
 );
 
--- Recommendation_Date = the day the quantity is meant for.
--- Basis = the reason, written by the Python recommendation engine.
+-- Recommendation_Date is the day the quantity is meant for; Basis is the reason.
 CREATE TABLE recommendation (
     Recommendation_ID    INT AUTO_INCREMENT PRIMARY KEY,
     Food_ID              INT NOT NULL,

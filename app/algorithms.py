@@ -1,11 +1,8 @@
-"""algorithms.py - hand-written merge sort and binary search (used by the GUI)."""
+"""Hand-written merge sort and binary search."""
 
 
 def merge_sort(items, key=lambda x: x, reverse=False):
-    """
-    Return a new sorted list. key picks the value to sort by,
-    e.g. key=lambda row: row["Food_Name"]. reverse=True sorts high to low.
-    """
+    """Return a new list sorted by key (high to low if reverse is True)."""
     if len(items) <= 1:
         return list(items)
     middle = len(items) // 2
@@ -26,10 +23,7 @@ def merge_sort(items, key=lambda x: x, reverse=False):
 
 
 def binary_search(sorted_items, target, key=lambda x: x):
-    """
-    Find target in a list sorted (low to high) by key.
-    Returns the index, or -1 if it is not there.
-    """
+    """Return the index of target in a list sorted by key, or -1 if it is not there."""
     low, high = 0, len(sorted_items) - 1
     while low <= high:
         middle = (low + high) // 2

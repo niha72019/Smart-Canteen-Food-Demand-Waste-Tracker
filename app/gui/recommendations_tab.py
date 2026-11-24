@@ -1,4 +1,4 @@
-"""recommendations_tab.py - shows the latest recommendations and their reasons."""
+"""Recommendations tab: the latest recommended quantities and their reasons."""
 
 import ttkbootstrap as ttk
 
@@ -7,7 +7,7 @@ from app.gui.table import DataTable
 
 
 class RecommendationsTab(ttk.Frame):
-    """Table of recommended quantities with the rule that produced each one."""
+    """Table of recommended quantities and their reasons."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
@@ -23,7 +23,7 @@ class RecommendationsTab(ttk.Frame):
         self.table.set_rows(db.latest_recommendations())
 
     def generate(self):
-        """Run the rule-based engine for the day after the last closed day."""
+        """Make new recommendations and show them."""
         try:
             new = recommend.generate_recommendations()
         except db.DatabaseError as err:

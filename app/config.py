@@ -1,9 +1,9 @@
-"""config.py - reads the MySQL login details from the .env file."""
+"""MySQL login settings, read from the .env file."""
 
 import os
 from dotenv import load_dotenv
 
-load_dotenv()   # copies the lines of .env into environment variables
+load_dotenv()
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),

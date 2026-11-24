@@ -1,4 +1,4 @@
-"""reports_tab.py - CSV import, CSV export of one report, and the full report export."""
+"""Reports & CSV tab: import past days and export reports."""
 
 from tkinter import filedialog
 
@@ -8,7 +8,7 @@ from app import csv_io, db, reports
 
 
 class ReportsTab(ttk.Frame):
-    """Import past days from CSV; export reports to CSV/PNG files."""
+    """Import and export buttons with an output box."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
@@ -37,7 +37,7 @@ class ReportsTab(ttk.Frame):
         self.output.insert("end", text)
 
     def import_csv(self):
-        """Ask for a CSV file and import it; list the rows that were skipped."""
+        """Import a CSV file chosen by the user and list the skipped rows."""
         path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
         if not path:
             return

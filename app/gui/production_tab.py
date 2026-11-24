@@ -1,4 +1,4 @@
-"""production_tab.py - morning: enter how much of each cooked item was prepared."""
+"""Production tab: enter how much of each cooked item was prepared today."""
 
 from datetime import date
 
@@ -41,7 +41,7 @@ class ProductionTab(ttk.Frame):
             self.entries[row["Food_ID"]] = (row["Food_Name"], var)
 
     def save(self):
-        """Validate every filled-in quantity and save them all in one transaction."""
+        """Validate and save the quantities prepared."""
         try:
             quantities = {food_id: validation.check_quantity(var.get(), name)
                           for food_id, (name, var) in self.entries.items() if var.get().strip()}

@@ -1,8 +1,4 @@
-"""
-Checks that the waste figures calculated in Python (app/analysis.py)
-match the same figures calculated in SQL (the v_daily_waste view).
-Read-only: uses the generated data and changes nothing.
-"""
+"""Tests that the waste figures from Python match the v_daily_waste view."""
 
 from app import analysis
 from app.db import run_query

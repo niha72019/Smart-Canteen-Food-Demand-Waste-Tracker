@@ -1,18 +1,13 @@
-"""
-analysis.py - waste, loss and demand analysis done in Python
-(lists, dicts and a 2D list) from rows fetched from the database.
-The same waste numbers are calculated in SQL by v_daily_waste;
-tests/test_analysis.py checks that both agree.
-"""
+"""Waste, loss and demand analysis of the daily records."""
 
 from app.algorithms import merge_sort
 from app.db import run_query
 
-WASTE_ALERT_PCT = 20       # items wasting more than this % are flagged
+WASTE_ALERT_PCT = 20
 
 
 def load_days(days=30):
-    """Fetch every closed item-day of the last `days` days, oldest first."""
+    """Closed daily records of every item for the last `days` days, oldest first."""
     return run_query(
         "SELECT d.Demand_Date, d.Food_ID, f.Food_Name, f.Is_Perishable, f.Preparation_Cost, "
         "       d.Quantity_Prepared, d.Quantity_Sold "
@@ -22,21 +17,18 @@ def load_days(days=30):
 
 
 def day_figures(row):
-    """
-    Unsold, wasted, waste % and loss for one item on one day.
-    Unsold cooked food is waste; unsold packaged food is kept, so not waste.
-    """
+    """Unsold quantity, wasted quantity, waste % and loss for one item on one day."""
     unsold = row["Quantity_Prepared"] - row["Quantity_Sold"]
-    wasted = unsold if row["Is_Perishable"] else 0
+    wasted = unsold if row["Is_Perishable"] else 0     # unsold packaged food is kept for the next day
     prepared = row["Quantity_Prepared"]
-    waste_pct = wasted * 100 / prepared if prepared > 0 else None    # rounded only when shown
+    waste_pct = wasted * 100 / prepared if prepared > 0 else None
     return {"unsold": unsold, "wasted": wasted, "waste_pct": waste_pct,
             "loss": wasted * row["Preparation_Cost"]}
 
 
 def item_summary(rows):
-    """Add up the rows per item. Returns a list of dicts, one per item."""
-    items = {}                                    # Food_Name -> running totals
+    """Totals and averages for each item."""
+    items = {}
     for row in rows:
         name = row["Food_Name"]
         if name not in items:
@@ -59,13 +51,13 @@ def item_summary(rows):
 
 
 def popular_and_low_demand(summary, count=3):
-    """Return (the `count` best-selling items, the `count` worst-selling items)."""
+    """The best-selling and worst-selling items."""
     ranked = merge_sort(summary, key=lambda item: item["avg_sold"], reverse=True)
     return ranked[:count], ranked[-count:]
 
 
 def waste_alerts(summary):
-    """Cooked items whose waste % is above WASTE_ALERT_PCT, worst first."""
+    """Cooked items wasting more than WASTE_ALERT_PCT, worst first."""
     flagged = [item for item in summary if item["perishable"] and item["waste_pct"] > WASTE_ALERT_PCT]
     return merge_sort(flagged, key=lambda item: item["waste_pct"], reverse=True)
 
@@ -76,14 +68,10 @@ def total_loss(summary):
 
 
 def demand_matrix(rows):
-    """
-    Build the items x days demand matrix as a 2D list.
-    matrix[i][j] = units of item i sold on day j (0 if no record).
-    Returns (item names, dates, matrix).
-    """
+    """Items x days demand matrix (2D list of units sold) with its item names and dates."""
     names = merge_sort(list({row["Food_Name"] for row in rows}))
     dates = merge_sort(list({row["Demand_Date"] for row in rows}))
-    matrix = [[0] * len(dates) for _ in names]    # start with all zeros
+    matrix = [[0] * len(dates) for _ in names]
     name_index = {name: i for i, name in enumerate(names)}
     date_index = {day: j for j, day in enumerate(dates)}
     for row in rows:

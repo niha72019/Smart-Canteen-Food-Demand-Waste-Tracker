@@ -1,10 +1,4 @@
-"""
-test_database.py - checks the triggers, views and sp_close_day.
-
-Each test works inside a transaction that is ROLLED BACK at the end,
-so nothing is saved in the real database. Test data uses the date
-2000-01-03 so it never mixes with real days.
-"""
+"""Tests for the triggers, views and sp_close_day; every test is rolled back."""
 
 import mysql.connector
 import pytest

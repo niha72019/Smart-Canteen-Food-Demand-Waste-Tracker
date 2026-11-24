@@ -1,10 +1,4 @@
-"""
-charts.py - the 4 dashboard charts, drawn with matplotlib and seaborn.
-Each function returns a matplotlib Figure; the GUI embeds it with
-FigureCanvasTkAgg and reports.py saves it as a PNG.
-(We create Figure objects directly instead of plt.subplots(), because
-pyplot would keep every chart in memory each time the dashboard refreshes.)
-"""
+"""The 4 dashboard charts, drawn with matplotlib and seaborn."""
 
 import pandas as pd
 import seaborn as sns
@@ -13,7 +7,6 @@ from matplotlib.figure import Figure
 from app import analysis, db
 from app.algorithms import merge_sort
 
-# One colour palette for every chart.
 BLUE = "#2a78d6"
 ORANGE = "#eb6834"
 GREY = "#52514e"
@@ -22,7 +15,7 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
 def new_chart(title):
-    """A blank figure with one plot area, a title and a light grid."""
+    """A blank chart with a title and a light grid."""
     fig = Figure(figsize=(5.6, 2.05), dpi=100, layout="constrained")
     ax = fig.add_subplot()
     ax.set_title(title, loc="left", fontsize=10, fontweight="bold")
@@ -46,18 +39,18 @@ def prepared_vs_sold(rows):
     ax.set_ylim(0, max(days[d][0] for d in dates) * 1.3)     # room above the lines for the legend
     ax.legend(frameon=False, fontsize=8, loc="upper left", ncols=2)
     ax.set_ylabel("Units", fontsize=8)
-    ax.tick_params(axis="x", rotation=30)              # tilt the dates so they do not overlap
+    ax.tick_params(axis="x", rotation=30)              # tilted so the dates do not overlap
     return fig
 
 
 def waste_by_item(summary):
-    """Horizontal bars: waste % per cooked item, with the 20 % alert line."""
+    """Bar chart: waste % per cooked item, with the alert level."""
     fig, ax = new_chart("Waste % by item")
     items = merge_sort([i for i in summary if i["perishable"]], key=lambda i: i["waste_pct"])
     ax.barh([i["name"] for i in items], [i["waste_pct"] for i in items], color=BLUE, height=0.6)
     ax.axvline(analysis.WASTE_ALERT_PCT, color=GREY, linestyle="--", linewidth=1)
     ax.text(analysis.WASTE_ALERT_PCT, len(items) - 0.4, " alert level", color=GREY, fontsize=8)
-    ax.set_ylim(-0.6, len(items) + 0.3)                 # a little room above the top bar for the label
+    ax.set_ylim(-0.6, len(items) + 0.3)                 # room above the top bar for the label
     for y, item in enumerate(items):
         ax.text(item["waste_pct"] + 0.5, y, f"{item['waste_pct']:.0f}%", va="center", fontsize=8)
     ax.grid(axis="y", visible=False)
@@ -66,7 +59,7 @@ def waste_by_item(summary):
 
 
 def weekday_heatmap(rows):
-    """Heatmap: average units sold per item on each day of the week (pandas pivot table)."""
+    """Heatmap: average units sold of each item on each day of the week."""
     fig, ax = new_chart("Average sold: item x weekday")
     df = pd.DataFrame(rows)
     df["Weekday"] = pd.to_datetime(df["Demand_Date"]).dt.day_of_week
@@ -80,7 +73,7 @@ def weekday_heatmap(rows):
 
 
 def monthly_loss_chart(rows):
-    """Bars: money lost to waste each month."""
+    """Bar chart: money lost to waste each month."""
     fig, ax = new_chart("Money lost to waste per month (Rs)")
     months = [r["Month"] for r in rows]
     losses = [float(r["Loss"]) for r in rows]
@@ -92,7 +85,7 @@ def monthly_loss_chart(rows):
 
 
 def all_charts():
-    """Build all 4 charts from the database. Returns {file name: Figure}."""
+    """All 4 charts as {name: Figure}."""
     rows_30 = analysis.load_days(30)
     return {
         "prepared_vs_sold": prepared_vs_sold(rows_30),

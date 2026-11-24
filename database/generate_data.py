@@ -1,18 +1,4 @@
-"""
-generate_data.py - fills an EMPTY database with 90 days of canteen history.
-
-    python -m database.setup_db         (first, to get an empty database)
-    python -m database.generate_data
-
-Each day is simulated through the same steps the app uses, so the triggers
-and sp_close_day do the real work:
-    restock packaged items -> cook perishable food -> sell in bills -> close day
-
-Demand is random but realistic (numpy): busy on weekdays, quiet at weekends.
-Staff cook each item's usual weekday amount, cut too little at weekends,
-and always over-cook some items, so there is waste to find.
-The last simulated day is yesterday, so today is free to try in the app.
-"""
+"""Fills an empty database with 90 days of simulated canteen history, ending yesterday."""
 
 from datetime import date, timedelta
 
@@ -46,7 +32,7 @@ STAFF_CUT = [1, 1, 1, 1, 1, 0.70, 0.45]               # staff cut less than they
 
 
 def create_menu():
-    """Insert categories, food items and suppliers. Returns a list of item dicts."""
+    """Insert the suppliers and food items; return the items."""
     run_in_transaction([("INSERT INTO supplier (Supplier_Name, Contact, Address) VALUES (%s, %s, %s)", s)
                         for s in SUPPLIERS])
     items = []
@@ -60,14 +46,14 @@ def create_menu():
 
 
 def simulate_day(day, items):
-    """Run one canteen day: restock, cook, sell (one transaction), then close the day."""
+    """Simulate one day: restock, cook, sell, then close the day."""
     weekday = day.weekday()
     sold_units = []                                    # one food id per unit sold
-    statements = []                                    # everything the day writes, saved together
+    statements = []
 
     for item in items:
         if item["perishable"]:
-            # Morning: cook the usual amount for this weekday, plus habitual extra.
+            # Morning: cook the usual amount for this weekday, plus the habitual extra.
             guess = item["base"] * STAFF_CUT[weekday] * (1 + item["extra"])
             available = max(5, round(guess * rng.normal(1, 0.08)))
             statements.append(("INSERT INTO daily_demand (Food_ID, Demand_Date, Quantity_Prepared) "
@@ -104,12 +90,12 @@ def simulate_day(day, items):
                                (food_id, bill.count(food_id), price[food_id])))
     run_in_transaction(statements)
 
-    # Evening: close the day (sold totals, waste, packaged rows).
+    # Evening: close the day.
     run_query("CALL sp_close_day(%s)", (day,))
 
 
 def main():
-    """Create the menu, then simulate DAYS days ending yesterday."""
+    """Create the menu and simulate DAYS days."""
     if run_query("SELECT 1 FROM food_item LIMIT 1"):
         print("The database already has data. Run  python -m database.setup_db  first.")
         return

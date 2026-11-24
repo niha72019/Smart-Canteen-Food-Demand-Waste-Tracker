@@ -1,8 +1,7 @@
--- views.sql - saved queries used by the app's reports.
+-- Views used by the app's reports.
 
 -- 1. Waste per item per closed day.
---    Unsold cooked food is waste; unsold packaged food carries over, so it is not.
---    app/analysis.py calculates the same numbers and a test checks they agree.
+--    Unsold packaged food carries over to the next day, so only cooked food counts as waste.
 CREATE VIEW v_daily_waste AS
 SELECT d.Demand_Date, d.Food_ID, f.Food_Name, c.Category_Name, f.Is_Perishable,
        d.Quantity_Prepared,
@@ -18,7 +17,7 @@ JOIN food_item f ON f.Food_ID = d.Food_ID
 JOIN category c ON c.Category_ID = f.Category_ID
 WHERE d.Is_Closed = TRUE;
 
--- 2. Lifetime totals per item (built on the view above).
+-- 2. Lifetime totals per item.
 CREATE VIEW v_item_performance AS
 SELECT Food_ID, Food_Name, Category_Name, Is_Perishable,
        COUNT(*)                                       AS Days,
@@ -40,10 +39,8 @@ SELECT DATE_FORMAT(Waste_Date, '%Y-%m') AS Month,
 FROM waste_record
 GROUP BY Month;
 
--- 4. Packaged items with less than 3 days of stock left
---    (based on average daily sales over the last 7 days).
---    The inner query (a derived table) works out each item's average first,
---    so the outer WHERE can compare stock with it.
+-- 4. Packaged items with less than 3 days of stock left (average sales of the last 7 days).
+--    The average is worked out in the inner query so the outer WHERE can use it.
 CREATE VIEW v_low_stock AS
 SELECT *
 FROM (SELECT f.Food_ID, f.Food_Name, i.Quantity_Available,

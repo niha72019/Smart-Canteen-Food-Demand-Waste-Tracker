@@ -1,14 +1,10 @@
-"""
-validation.py - checks what the user typed into a form.
-Each function returns the cleaned value or raises ValueError with a
-message the GUI can show in a pop-up.
-"""
+"""Checks for form input: each returns the cleaned value or raises ValueError."""
 
 from datetime import date
 
 
 def check_text(value, field, max_length=100):
-    """Text must not be empty or too long. Returns it without extra spaces."""
+    """Non-empty text of at most max_length characters, without extra spaces."""
     value = str(value).strip()
     if not value:
         raise ValueError(f"{field} is required.")
@@ -40,7 +36,7 @@ def check_price(value, field):
 
 
 def check_date(value, field="Date"):
-    """A date written as YYYY-MM-DD. Returns a date object."""
+    """A date written as YYYY-MM-DD."""
     try:
         return date.fromisoformat(str(value).strip())
     except ValueError:

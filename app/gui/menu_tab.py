@@ -1,4 +1,4 @@
-"""menu_tab.py - add, update and delete food items."""
+"""Menu tab: add, update and delete food items."""
 
 import ttkbootstrap as ttk
 
@@ -7,7 +7,7 @@ from app.gui.table import DataTable
 
 
 class MenuTab(ttk.Frame):
-    """The menu table on the left, the item form on the right."""
+    """Menu table with a form to add, update and delete items."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
@@ -57,7 +57,7 @@ class MenuTab(ttk.Frame):
             self.perishable.set(bool(row["Is_Perishable"]))
 
     def save(self, food_id):
-        """Validate the form, then add (food_id None) or update the item."""
+        """Validate the form, then add or update the item."""
         try:
             db.save_item(food_id, validation.check_text(self.name.get(), "Name"),
                          validation.check_text(self.category.get(), "Category", 50),

@@ -1,4 +1,4 @@
-"""insights_tab.py - pick one of the analytical queries (app/queries.py) and see its result."""
+"""SQL Insights tab: run an analytical query and show its result."""
 
 import ttkbootstrap as ttk
 
@@ -8,11 +8,11 @@ from app.queries import QUERIES
 
 
 class InsightsTab(ttk.Frame):
-    """Drop-down of the numbered queries; the result appears in a sortable table."""
+    """Drop-down of the analytical queries and a table for the result."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
-        self.queries = QUERIES                                 # title -> SQL text
+        self.queries = QUERIES
         top = ttk.Frame(self)
         top.pack(fill="x")
         self.choice = ttk.StringVar(value=list(QUERIES)[0])

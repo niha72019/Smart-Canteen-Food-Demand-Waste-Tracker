@@ -1,4 +1,4 @@
-"""main.py - starts the Smart Canteen app.   Run:  python main.py"""
+"""Starts the Smart Canteen app."""
 
 from app.gui.main_window import run
 

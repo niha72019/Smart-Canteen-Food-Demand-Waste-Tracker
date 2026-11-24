@@ -1,8 +1,4 @@
-"""
-table.py - a table widget used by several tabs.
-Click a column heading to sort it (merge sort); type a name in the search
-box to jump to that row (binary search).
-"""
+"""A table with sortable columns and a search box, used by several tabs."""
 
 from functools import partial
 
@@ -12,12 +8,9 @@ from app.algorithms import binary_search, merge_sort
 
 
 def sort_value(value):
-    """
-    The value a cell is sorted by. Pairs are compared first item first,
-    so (0, ...) comes before (1, ...): empty cells always go last.
-    """
+    """The value a cell is sorted by (empty cells go last)."""
     if value is None:
-        return (1, "")
+        return (1, "")                     # (1, ...) sorts after every (0, ...)
     elif isinstance(value, str):
         return (0, value.lower())          # text: ignore upper/lower case
     else:
@@ -25,15 +18,15 @@ def sort_value(value):
 
 
 class DataTable(ttk.Frame):
-    """A Treeview showing a list of dicts. columns = [(key, heading, width), ...] or None (automatic)."""
+    """A table of rows (dicts); columns = [(key, heading, width), ...] or None to use the row keys."""
 
     def __init__(self, parent, columns=None, search_key=None, height=12):
         super().__init__(parent)
         self.columns, self.search_key, self.rows = columns, search_key, []
-        self.automatic = columns is None                 # columns come from the rows (SQL Insights)
+        self.automatic = columns is None                 # columns come from the rows
         self.sorted_by, self.reverse = None, False
 
-        if search_key:                                   # search box above the table
+        if search_key:
             bar = ttk.Frame(self)
             bar.pack(fill="x", pady=(0, 6))
             self.search_text = ttk.StringVar()
@@ -53,12 +46,11 @@ class DataTable(ttk.Frame):
             self.set_columns(columns)
 
     def set_columns(self, columns):
-        """Create the column headings; clicking one sorts by that column."""
+        """Create the column headings."""
         self.columns = columns
         self.tree.configure(columns=[key for key, _, _ in columns])
         for key, heading, width in columns:
-            # partial(self.sort_by, key) makes a ready-made call "self.sort_by(key)" for this
-            # column, which the heading runs when it is clicked.
+            # partial() stores the call self.sort_by(key), which runs when the heading is clicked.
             self.tree.heading(key, text=heading, command=partial(self.sort_by, key))
             self.tree.column(key, width=width, anchor="w")
 
@@ -71,21 +63,21 @@ class DataTable(ttk.Frame):
         self.show()
 
     def show(self):
-        """Redraw the Treeview from self.rows (row i gets the id 'i')."""
+        """Redraw the table; row i gets the id 'i'."""
         self.tree.delete(*self.tree.get_children())
         for i, row in enumerate(self.rows):
             values = ["" if row.get(key) is None else row[key] for key, _, _ in self.columns]
             self.tree.insert("", "end", iid=str(i), values=values)
 
     def sort_by(self, key):
-        """Sort by a column with merge sort; clicking the same column again reverses it."""
+        """Sort by a column; clicking the same column again reverses the order."""
         self.reverse = not self.reverse if self.sorted_by == key else False
         self.sorted_by = key
         self.rows = merge_sort(self.rows, key=lambda row: sort_value(row[key]), reverse=self.reverse)
         self.show()
 
     def search(self):
-        """Find the row whose search column equals the text (binary search on a sorted copy)."""
+        """Select the row whose search column matches the typed text."""
         target = self.search_text.get().strip().lower()
         by_name = merge_sort(self.rows, key=lambda row: str(row[self.search_key]).lower())
         index = binary_search(by_name, target, key=lambda row: str(row[self.search_key]).lower())

@@ -1,4 +1,4 @@
-"""main_window.py - the main window: one notebook tab per screen."""
+"""The main window, with one tab per screen."""
 
 import ttkbootstrap as ttk
 
@@ -19,7 +19,7 @@ TABS = [("Dashboard", DashboardTab), ("Menu", MenuTab), ("Production", Productio
 
 
 def build_window():
-    """Create the window and its tabs. Returns (window, notebook, list of tabs)."""
+    """Create the window and its tabs; return (window, notebook, tabs)."""
     window = ttk.Window(title="Smart Canteen - Food Demand & Waste Tracker", themename="flatly",
                         size=(1280, 860))
     notebook = ttk.Notebook(window)

@@ -1,13 +1,8 @@
--- procedures.sql - stored procedures.
---
--- sp_close_day is run inside ONE transaction by the caller:
---   Python:    app/db.py run_query() commits it, or rolls everything back on error
---   Workbench: START TRANSACTION;  CALL sp_close_day('2026-11-24');  COMMIT;
+-- Stored procedures. sp_close_day must be run inside one transaction by the caller.
 
 DELIMITER $$
 
--- End of day: record what was sold, throw away cooked leftovers,
--- and write one row for each packaged item. Returns the day's summary.
+-- Close a day: record sales, turn cooked leftovers into waste, and return the day's summary.
 CREATE PROCEDURE sp_close_day(IN p_date DATE)
 BEGIN
     IF EXISTS (SELECT 1 FROM daily_demand WHERE Demand_Date = p_date AND Is_Closed = TRUE) THEN

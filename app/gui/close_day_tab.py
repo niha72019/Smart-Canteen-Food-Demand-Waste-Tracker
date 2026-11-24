@@ -1,4 +1,4 @@
-"""close_day_tab.py - evening: close the day and make tomorrow's recommendations."""
+"""Close Day tab: close today and make tomorrow's recommendations."""
 
 from datetime import date
 
@@ -9,7 +9,7 @@ from app.gui.table import DataTable
 
 
 class CloseDayTab(ttk.Frame):
-    """One button runs sp_close_day, then the recommendation engine."""
+    """Closes the day and shows its summary."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
@@ -32,7 +32,7 @@ class CloseDayTab(ttk.Frame):
         self.button.configure(state="disabled" if closed else "normal")
 
     def close(self):
-        """Ask, close the day, show the summary, then generate recommendations."""
+        """Ask, then close the day and make tomorrow's recommendations."""
         if ttk.Messagebox.yesno("Close today? No more bills can be added after this.", "Close day") != "Yes":
             return
         try:

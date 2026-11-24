@@ -1,4 +1,4 @@
-"""dashboard_tab.py - KPI cards, waste alerts and the 4 charts."""
+"""Dashboard tab: KPI cards, waste alerts and the 4 charts."""
 
 from datetime import date
 
@@ -22,7 +22,7 @@ class DashboardTab(ttk.Frame):
         self.refresh()
 
     def card(self, column, title, value):
-        """One KPI card: a framed title around a big number."""
+        """One KPI card: a title and a big number."""
         box = ttk.Labelframe(self.cards, text=title, padding=(12, 2))
         box.grid(row=0, column=column, padx=(0, 10), sticky="ew")
         self.cards.columnconfigure(column, weight=1)
