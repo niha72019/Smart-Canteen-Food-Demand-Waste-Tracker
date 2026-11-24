@@ -1,0 +1,13 @@
+# Database connectivity (as promised in the Python synopsis)
+mysql-connector-python>=9.4
+# GUI theme on top of Tkinter
+ttkbootstrap>=1.10
+# Analysis and charts
+pandas>=2.3
+numpy>=2.3
+matplotlib>=3.10
+seaborn>=0.13.2
+# Loads DB credentials from .env
+python-dotenv>=1.0
+# Tests
+pytest>=8.0
