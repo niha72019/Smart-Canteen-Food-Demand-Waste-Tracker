@@ -190,6 +190,11 @@ def monthly_loss():
     return run_query("SELECT * FROM v_monthly_loss ORDER BY Month")
 
 
+def first_closed_day():
+    """Date of the oldest closed day in the records."""
+    return run_query("SELECT MIN(Demand_Date) AS First_Day FROM daily_demand WHERE Is_Closed = TRUE")[0]["First_Day"]
+
+
 def daily_waste(days=30):
     """Daily waste figures for the last `days` days."""
     return run_query("SELECT * FROM v_daily_waste WHERE Demand_Date >= CURDATE() - INTERVAL %s DAY "

@@ -4,32 +4,37 @@ from tkinter import filedialog
 
 import ttkbootstrap as ttk
 
-from app import csv_io, db, reports
+from app import charts, csv_io, db, reports
 
 
 class ReportsTab(ttk.Frame):
-    """Import and export buttons with an output box."""
+    """Import and export buttons, an output box and 2 report charts."""
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
-        box = ttk.Labelframe(self, text="Import past days (CSV: date,food,prepared,sold)", padding=12)
-        box.pack(fill="x")
+        row = ttk.Frame(self)
+        row.pack(fill="x")
+        box = ttk.Labelframe(row, text="Import past days (CSV: date,food,prepared,sold)", padding=12)
+        box.pack(side="left", fill="y")
         ttk.Button(box, text="Import CSV file...", command=self.import_csv).pack(anchor="w")
 
-        box = ttk.Labelframe(self, text="Export", padding=12)
-        box.pack(fill="x", pady=10)
+        box = ttk.Labelframe(row, text="Export", padding=12)
+        box.pack(side="left", fill="both", expand=True, padx=(10, 0))
         self.report = ttk.StringVar(value=list(reports.REPORTS)[0])
         ttk.Combobox(box, textvariable=self.report, values=list(reports.REPORTS), state="readonly",
-                     width=32).pack(side="left")
+                     width=28).pack(side="left")
         ttk.Button(box, text="Export to CSV...", command=self.export_one).pack(side="left", padx=6)
-        ttk.Button(box, text="Export full report (CSVs + charts)", bootstyle="success",
+        ttk.Button(box, text="Export full report", bootstyle="success",
                    command=self.export_all).pack(side="left", padx=6)
 
-        self.output = ttk.Text(self, height=20, font=("Consolas", 10))
-        self.output.pack(fill="both", expand=True)
+        self.output = ttk.Text(self, height=2, font=("Consolas", 10))
+        self.output.pack(fill="x", pady=(10, 0))
+        self.chart_area = ttk.Frame(self)
+        self.chart_area.pack(fill="both", expand=True, pady=(10, 0))
 
     def refresh(self):
-        """Nothing to reload on this tab."""
+        """Redraw the 2 report charts."""
+        charts.show(charts.report_charts(), self.chart_area)
 
     def write(self, text):
         """Show a message in the output box."""

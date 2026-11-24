@@ -1,32 +1,46 @@
-"""The 4 dashboard charts, drawn with matplotlib and seaborn."""
+"""The 4 charts (2 on the Dashboard, 2 on the Reports tab), drawn with matplotlib and seaborn."""
 
+from datetime import date
+
+import matplotlib
 import pandas as pd
 import seaborn as sns
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from app import analysis, db
 from app.algorithms import merge_sort
 
 BLUE = "#2a78d6"
-ORANGE = "#eb6834"
-GREY = "#52514e"
-HEATMAP_COLOURS = ["#eef4fc", "#c4dbf5", "#8fbbec", "#4f93df", "#2a78d6", "#1d5aa6", "#0d3c73"]   # light -> dark
+GREY_BLUE = "#9fb3c8"
+ALERT = "#e0582b"            # orange-red, used only for waste alerts
+RED = "#c62828"
+TEXT = "#444444"
+LIGHT = "#d0d0d0"
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
+# One style for every chart: same font, small text, no bold titles.
+matplotlib.rcParams.update({"font.family": ["Segoe UI", "DejaVu Sans"], "font.size": 9,
+                            "text.color": TEXT, "axes.labelcolor": TEXT,
+                            "xtick.color": TEXT, "ytick.color": TEXT})
 
-def new_chart(title):
-    """A blank chart with a title and a light grid."""
-    fig = Figure(figsize=(5.6, 2.05), dpi=100, layout="constrained")
+
+def new_chart(title, grid_axis="y"):
+    """A blank chart: title, light gridlines, only a light bottom axis."""
+    fig = Figure(figsize=(6, 3.7), dpi=100, layout="constrained")
     ax = fig.add_subplot()
-    ax.set_title(title, loc="left", fontsize=10, fontweight="bold")
-    ax.tick_params(labelsize=7)
-    ax.grid(axis="y", alpha=0.3)
+    ax.set_title(title, loc="left", fontsize=11, pad=12)
+    sns.despine(ax=ax, left=True)                      # remove the box, keep the bottom axis
+    ax.spines["bottom"].set_color(LIGHT)
+    ax.tick_params(length=0, pad=6)
+    ax.grid(axis=grid_axis, color="#ececec")
+    ax.set_axisbelow(True)
     return fig, ax
 
 
 def prepared_vs_sold(rows):
     """Line chart: total cooked food prepared vs sold per day."""
-    fig, ax = new_chart("Cooked food: prepared vs sold per day")
+    fig, ax = new_chart("Prepared vs sold (last 14 days)")
     days = {}                                         # date -> [prepared, sold]
     for row in rows:
         if row["Is_Perishable"]:
@@ -34,62 +48,82 @@ def prepared_vs_sold(rows):
             totals[0] += row["Quantity_Prepared"]
             totals[1] += row["Quantity_Sold"]
     dates = merge_sort(list(days))
-    ax.plot(dates, [days[d][0] for d in dates], color=BLUE, linewidth=2, label="Prepared")
-    ax.plot(dates, [days[d][1] for d in dates], color=ORANGE, linewidth=2, label="Sold")
-    ax.set_ylim(0, max(days[d][0] for d in dates) * 1.3)     # room above the lines for the legend
-    ax.legend(frameon=False, fontsize=8, loc="upper left", ncols=2)
-    ax.set_ylabel("Units", fontsize=8)
-    ax.tick_params(axis="x", rotation=30)              # tilted so the dates do not overlap
+    x = range(len(dates))
+    ax.plot(x, [days[d][0] for d in dates], color=GREY_BLUE, linewidth=2, label="Prepared")
+    ax.plot(x, [days[d][1] for d in dates], color=BLUE, linewidth=2, label="Sold")
+    ax.set_xticks(x[::3], [f"{d.day} {d:%b}" for d in dates[::3]])     # about 5 labels, e.g. "25 Oct"
+    ax.set_ylim(0, max(days[d][0] for d in dates) * 1.25)              # room above the lines for the legend
+    ax.legend(frameon=False, loc="upper left", ncols=2)
+    ax.set_ylabel("Units")
     return fig
 
 
 def waste_by_item(summary):
-    """Bar chart: waste % per cooked item, with the alert level."""
-    fig, ax = new_chart("Waste % by item")
+    """Bar chart: waste % per cooked item; items over the alert level in orange-red."""
+    fig, ax = new_chart("Waste % by item (last 30 days)", grid_axis="x")
     items = merge_sort([i for i in summary if i["perishable"]], key=lambda i: i["waste_pct"])
-    ax.barh([i["name"] for i in items], [i["waste_pct"] for i in items], color=BLUE, height=0.6)
-    ax.axvline(analysis.WASTE_ALERT_PCT, color=GREY, linestyle="--", linewidth=1)
-    ax.text(analysis.WASTE_ALERT_PCT, len(items) - 0.4, " alert level", color=GREY, fontsize=8)
-    ax.set_ylim(-0.6, len(items) + 0.3)                 # room above the top bar for the label
+    limit = analysis.WASTE_ALERT_PCT
+    colours = [ALERT if i["waste_pct"] > limit else GREY_BLUE for i in items]
+    ax.barh([i["name"] for i in items], [i["waste_pct"] for i in items], color=colours, height=0.6)
     for y, item in enumerate(items):
-        ax.text(item["waste_pct"] + 0.5, y, f"{item['waste_pct']:.0f}%", va="center", fontsize=8)
-    ax.grid(axis="y", visible=False)
-    ax.grid(axis="x", alpha=0.3)
+        ax.text(item["waste_pct"] + 0.6, y, f"{item['waste_pct']:.0f}%", va="center",
+                bbox={"facecolor": "white", "edgecolor": "none", "pad": 1})   # white box so the line does not cross it
+    ax.axvline(limit, color=RED, linestyle="--", linewidth=1)
+    ax.text(limit + 0.6, len(items) - 0.35, f"{limit}% alert", color=RED)   # in the empty row above the bars
+    ax.set_ylim(-0.6, len(items) + 0.2)
+    ax.set_xlim(0, max(max(i["waste_pct"] for i in items), limit) * 1.2)    # room for the % labels
+    ax.xaxis.set_major_formatter("{x:.0f}%")
     return fig
 
 
-def weekday_heatmap(rows):
-    """Heatmap: average units sold of each item on each day of the week."""
-    fig, ax = new_chart("Average sold: item x weekday")
+def weekday_sales(rows):
+    """Bar chart: average cooked units sold on each day of the week."""
+    fig, ax = new_chart("Average cooked food sold by weekday")
     df = pd.DataFrame(rows)
-    df["Weekday"] = pd.to_datetime(df["Demand_Date"]).dt.day_of_week
-    table = df.pivot_table(index="Food_Name", columns="Weekday", values="Quantity_Sold", aggfunc="mean")
-    table.columns = [WEEKDAYS[d] for d in table.columns]
-    sns.heatmap(table, ax=ax, cmap=HEATMAP_COLOURS, annot=True, fmt=".0f", annot_kws={"fontsize": 7},
-                linewidths=1, linecolor="white", cbar=False)
-    ax.set_xlabel("")
-    ax.set_ylabel("")
+    df = df[df["Is_Perishable"] == 1]
+    per_day = df.groupby("Demand_Date")["Quantity_Sold"].sum().reset_index()       # total sold each day
+    per_day["Weekday"] = pd.to_datetime(per_day["Demand_Date"]).dt.day_of_week
+    averages = per_day.groupby("Weekday")["Quantity_Sold"].mean()
+    ax.bar([WEEKDAYS[d] for d in averages.index], averages.values, color=BLUE, width=0.6)
+    ax.set_ylabel("Units")
     return fig
 
 
-def monthly_loss_chart(rows):
-    """Bar chart: money lost to waste each month."""
-    fig, ax = new_chart("Money lost to waste per month (Rs)")
-    months = [r["Month"] for r in rows]
+def monthly_loss_chart(rows, first_day):
+    """Bar chart: money lost to waste in each complete month."""
+    fig, ax = new_chart("Money lost to waste per month")
+    start = f"{first_day:%Y-%m}"                # complete only if the data starts on the 1st
+    this_month = f"{date.today():%Y-%m}"        # still running, so not complete
+    rows = [r for r in rows if this_month > r["Month"] > start or (r["Month"] == start and first_day.day == 1)]
+    labels = [pd.Timestamp(r["Month"] + "-01").strftime("%b %Y") for r in rows]
     losses = [float(r["Loss"]) for r in rows]
-    ax.bar(months, losses, color=BLUE, width=0.55)
-    ax.set_ylim(0, max(losses) * 1.2)                   # room above the bars for the numbers
+    ax.bar(labels, losses, color=BLUE, width=0.5)
     for x, loss in enumerate(losses):
-        ax.text(x, loss, f"{loss:,.0f}", ha="center", va="bottom", fontsize=8)
+        ax.text(x, loss, f"Rs {loss:,.0f}", ha="center", va="bottom")
+    ax.set_ylim(0, max(losses, default=1) * 1.2)       # room above the bars for the numbers
+    ax.yaxis.set_major_formatter("{x:,.0f}")
+    ax.set_ylabel("Rs")
     return fig
 
 
-def all_charts():
-    """All 4 charts as {name: Figure}."""
-    rows_30 = analysis.load_days(30)
-    return {
-        "prepared_vs_sold": prepared_vs_sold(rows_30),
-        "waste_by_item": waste_by_item(analysis.item_summary(rows_30)),
-        "weekday_heatmap": weekday_heatmap(analysis.load_days(90)),
-        "monthly_loss": monthly_loss_chart(db.monthly_loss()),
-    }
+def dashboard_charts():
+    """The 2 Dashboard charts as {name: Figure}."""
+    return {"prepared_vs_sold": prepared_vs_sold(analysis.load_days(14)),
+            "waste_by_item": waste_by_item(analysis.item_summary(analysis.load_days(30)))}
+
+
+def report_charts():
+    """The 2 Reports-tab charts as {name: Figure}."""
+    return {"weekday_sales": weekday_sales(analysis.load_days(90)),
+            "monthly_loss": monthly_loss_chart(db.monthly_loss(), db.first_closed_day())}
+
+
+def show(figures, frame):
+    """Draw the figures side by side inside a Tkinter frame."""
+    for widget in frame.winfo_children():
+        widget.destroy()
+    for column, fig in enumerate(figures.values()):
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().grid(row=0, column=column, padx=10, pady=10, sticky="nsew")
+        frame.columnconfigure(column, weight=1)

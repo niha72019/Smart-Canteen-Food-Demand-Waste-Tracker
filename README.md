@@ -18,7 +18,7 @@ Built as one project for two 3rd-semester labs:
 - **Recommendations**: rule-based and explainable, with the reason stored for each item.
 - **Stock & purchases**: stock levels, low-stock warning, suppliers, purchase entry.
 - **CSV import & export**: import past days (bad rows are skipped and reported), export any report, or export a full report of CSVs and chart PNGs.
-- **Dashboard**: KPI cards and 4 charts.
+- **Dashboard**: 4 KPI cards and 2 charts (prepared vs sold, waste % by item). The Reports tab shows 2 more (sales by weekday, monthly loss).
 - **SQL Insights**: run any of the 20 analytical queries from inside the app.
 
 ## Tech stack
@@ -182,7 +182,7 @@ rows on purpose, to show how they are reported.
 
 ## Screenshots
 
-**Dashboard**: KPIs, waste alerts and the 4 charts
+**Dashboard**: 4 KPIs, prepared vs sold, and waste % by item (items over the 20% alert in orange)
 ![Dashboard](screenshots/dashboard.png)
 
 **Billing**
@@ -190,6 +190,9 @@ rows on purpose, to show how they are reported.
 
 **Recommendations**: quantity for tomorrow and the reason for each
 ![Recommendations](screenshots/recommendations.png)
+
+**Reports & CSV**: CSV import/export, sales by weekday and monthly loss
+![Reports & CSV](screenshots/reports.png)
 
 **SQL Insights**: analytical queries run from the app (here: `RANK()` window function)
 ![SQL Insights](screenshots/sql_insights.png)

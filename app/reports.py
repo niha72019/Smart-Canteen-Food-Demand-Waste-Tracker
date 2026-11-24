@@ -39,7 +39,7 @@ def export_full_report():
             path = REPORTS_DIR / f"{stamp}_{name.split(' (')[0].lower().replace(' ', '_')}.csv"
             csv_io.export_rows(rows, path)
             files.append(path)
-    for name, fig in charts.all_charts().items():
+    for name, fig in {**charts.dashboard_charts(), **charts.report_charts()}.items():
         path = REPORTS_DIR / f"{stamp}_{name}.png"
         fig.savefig(path, dpi=150)
         files.append(path)
